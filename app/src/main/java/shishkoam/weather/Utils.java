@@ -1,6 +1,13 @@
 package shishkoam.weather;
 
+import android.content.Context;
+import android.location.Address;
+import android.location.Geocoder;
+
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 import shishkoam.weather.weather.City;
 
@@ -9,9 +16,6 @@ import shishkoam.weather.weather.City;
  */
 
 public class Utils {
-    public static String coordToString(double coord) {
-        return String.valueOf(Math.round(coord * 100) / 100f);
-    }
 
     public static String getTheNearestCity(ArrayList<City> cities, double longitude, double latitude) {
         String id = cities.get(0).getId();
@@ -26,4 +30,16 @@ public class Utils {
         return id;
     }
 
+    public static String getCommonCityName(Context context, double lat, double lon) {
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
+            if (addresses.size() > 0) {
+                return addresses.get(0).getLocality();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

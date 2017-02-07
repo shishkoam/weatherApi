@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -40,12 +38,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 
 import shishkoam.weather.places.PlaceArrayAdapter;
 import shishkoam.weather.weather.City;
@@ -75,14 +70,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private AutoCompleteTextView autoCompleteViewPlaces;
     private PlaceArrayAdapter placeArrayAdapter;
     private GoogleApiClient googleApiClient;
-    private Geocoder geocoder;
     private CheckBox button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        geocoder = new Geocoder(context, Locale.getDefault());
         googleApiClient = new GoogleApiClient.Builder(MainActivity.this)
                 .addApi(Places.GEO_DATA_API)
                 .enableAutoManage(this, GOOGLE_API_CLIENT_ID, this)
@@ -243,15 +236,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     };
 
     private void setCityValueToAutoCompleteView(double lat, double lon) {
-        try {
-            List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
-            if (addresses.size() > 0) {
-                autoCompleteViewPlaces.setText(addresses.get(0).getLocality());
-                autoCompleteViewPlaces.dismissDropDown();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        autoCompleteViewPlaces.setText(Utils.getCommonCityName(context, lat, lon));
+        autoCompleteViewPlaces.dismissDropDown();
     }
 
     private void processLocation(double lat, double lon, boolean myPosition) {
@@ -318,7 +304,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 return;
             }
             //get common city name with default locale
-            String cityName = validCityName();
+            String cityName = Utils.getCommonCityName(context, lat, lon);
             if (cityName != null) {
                 weather.setCity(new City(cityName));
             }
@@ -326,7 +312,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 //                autoCompleteViewPlaces.setText(weather.getCity().getName());
 //                autoCompleteViewPlaces.dismissDropDown();
 //            }
-            resultText.setText(weather.toString(context));
+            resultText.setText(getWeatherInfoString(weather));
 
             //run load icon task
             LoadIconTask iconTask = new LoadIconTask();
@@ -340,18 +326,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             weatherProgressBar.setVisibility(View.GONE);
         }
 
-        private String validCityName() {
-            String cityName = "";
-            try {
-                List<Address> addresses = geocoder.getFromLocation(lat, lon, 1);
-                cityName = addresses.get(0).getLocality();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return cityName;
+        private String getWeatherInfoString(WeatherClass weather) {
+            return context.getString(R.string.weather_info_string, weather.getCity().getName(),
+                    weather.getCondition(), weather.getDescr(),  weather.getHumidity(),
+                    weather.getPressure(), weather.getTemp(), weather.getMinTemp(),
+                    weather.getMaxTemp(), weather.getWindDeg(),  weather.getWindSpeed(),
+                    weather.getCloudPerc());
         }
     }
-
 
     class LoadIconTask extends AsyncTask<String, Void, Bitmap> {
 

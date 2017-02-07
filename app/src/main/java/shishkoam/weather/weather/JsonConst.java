@@ -1,7 +1,7 @@
 package shishkoam.weather.weather;
 
 /**
- * Created by User on 06.02.2017.
+ * Created by shishkoam on 06.02.2017
  */
 
 public interface JsonConst {

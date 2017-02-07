@@ -24,100 +24,115 @@ public class WeatherClass {
     private City city;
 
     /**
-     Methods
+     * Setters
      */
 
-    public String toString(Context context){
-        return context.getString(R.string.weather_info_string , city.getName(), conditionMain,
-                description, humidity, pressure, temp, temp_min, temp_max, windDeg, windSpeed, cloudPerc);
+    public void setCity(City city) {
+        this.city = city;
     }
+
+    public void setWeatherId(int id) {
+        this.weatherId = id;
+    }
+
+    public void setDescr(String description) {
+        this.description = description;
+    }
+
+    public void setCondition(String conditionMain) {
+        this.conditionMain = conditionMain;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
+    }
+
+    public void setHumidity(int humidity) {
+        this.humidity = humidity;
+    }
+
+    public void setPressure(int pressure) {
+        this.pressure = pressure;
+    }
+
+    public void setMaxTemp(float temp_max) {
+        this.temp_max = temp_max;
+    }
+
+    public void setMinTemp(float temp_min) {
+        this.temp_min = temp_min;
+    }
+
+    public void setTemp(float temp) {
+        this.temp = temp;
+    }
+
+    public void setWindSpeed(float windSpeed) {
+        this.windSpeed = windSpeed;
+    }
+
+    public void setWindDeg(float windDeg) {
+        this.windDeg = windDeg;
+    }
+
+    public void setCloudPerc(int all) {
+        this.cloudPerc = all;
+    }
+
 
     /**
-     Setters
+     * Getters
      */
 
-    public void setCity(City city){
-        this.city=city;
-    }
-    public void setWeatherId(int id){
-        this.weatherId=id;
-    }
-    public void setDescr(String description){
-        this.description=description;
-    }
-    public void setCondition(String conditionMain){
-        this.conditionMain=conditionMain;
-    }
-    public void setIcon(String icon){
-        this.icon=icon;
-    }
-    public void setHumidity(int humidity){
-        this.humidity=humidity;
-    }
-    public void setPressure(int pressure){
-        this.pressure=pressure;
-    }
-    public void setMaxTemp(float temp_max){
-        this.temp_max=temp_max;
-    }
-    public void setMinTemp(float temp_min){
-        this.temp_min=temp_min;
-    }
-    public void setTemp(float temp){
-        this.temp=temp;
-    }
-    public void setWindSpeed(float windSpeed){
-        this.windSpeed=windSpeed;
-    }
-    public void setWindDeg(float windDeg){
-        this.windDeg=windDeg;
-    }
-    public void setCloudPerc(int all){
-        this.cloudPerc=all;
-    }
-
-
-    /**
-     Getters
-     */
-
-    public City getCity(){
+    public City getCity() {
         return city;
     }
-    public int getWeatherId(){
+
+    public int getWeatherId() {
         return weatherId;
     }
-    public String getDescr(){
+
+    public String getDescr() {
         return description;
     }
-    public String getCondition(){
+
+    public String getCondition() {
         return conditionMain;
     }
-    public String getIcon(){
+
+    public String getIcon() {
         return icon;
     }
-    public int getHumidity(){
+
+    public int getHumidity() {
         return humidity;
     }
-    public int getPressure(){
+
+    public int getPressure() {
         return pressure;
     }
-    public float getMaxTemp(){
+
+    public float getMaxTemp() {
         return temp_max;
     }
-    public float getMinTemp(){
+
+    public float getMinTemp() {
         return temp_min;
     }
-    public float getTemp(){
+
+    public float getTemp() {
         return temp;
     }
-    public float getWindSpeed(){
+
+    public float getWindSpeed() {
         return windSpeed;
     }
-    public float getWindDeg(){
+
+    public float getWindDeg() {
         return windDeg;
     }
-    public int getCloudPerc(){
+
+    public int getCloudPerc() {
         return cloudPerc;
     }
 }

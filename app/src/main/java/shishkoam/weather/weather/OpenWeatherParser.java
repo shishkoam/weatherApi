@@ -17,7 +17,7 @@ public class OpenWeatherParser implements JsonConst {
     /**
      * Constructor
      *
-     * @param data  - json string from api.openweathermap by coordinates request
+     * @param data - json string from api.openweathermap by coordinates request
      */
     public OpenWeatherParser(String data) {
         this.data = data;

@@ -42,6 +42,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+import shishkoam.weather.database.DBHelper;
+import shishkoam.weather.database.DBObject;
 import shishkoam.weather.places.PlaceArrayAdapter;
 import shishkoam.weather.weather.City;
 import shishkoam.weather.weather.OpenWeatherParser;
@@ -71,6 +73,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private PlaceArrayAdapter placeArrayAdapter;
     private GoogleApiClient googleApiClient;
     private CheckBox button;
+    private DBHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,13 +97,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 turnOnLocation();
             }
         });
-
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         initializeMap();
-
         autoCompleteViewPlaces = (AutoCompleteTextView) findViewById(R.id.atv_places);
         initPlacesAutoCompleteView();
         requestLocation();
+        dbHelper = new DBHelper(this);
+        DBObject object = dbHelper.readFirstData();
     }
 
     private void initPlacesAutoCompleteView() {
@@ -243,7 +246,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private void processLocation(double lat, double lon, boolean myPosition) {
         statusText.setText(R.string.getting_weather);
         weatherProgressBar.setVisibility(View.VISIBLE);
-        JSONSearchTask task = new JSONSearchTask();
+        LoadWeatherTask task = new LoadWeatherTask();
         client.cancelTasks();
         client.addTask(task);
         task.execute(lat, lon);
@@ -272,68 +275,83 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         requestLocation();
     }
 
-    public class JSONSearchTask extends AsyncTask<Double, Void, WeatherClass> {
+    private  WeatherClass processWeatherJson(String weatherInfo, double lat, double lon) {
+        if (weatherInfo == null) {
+            return null;
+        }
+        OpenWeatherParser openWeatherParser = new OpenWeatherParser(weatherInfo);
+        ArrayList<City> cities = openWeatherParser.parseTheCitiesFromData();
+        if (cities.size() == 0) {
+            return null;
+        }
+        String idOfNearestCity = Utils.getTheNearestCity(cities, lat, lon);
+        WeatherClass weather = openWeatherParser.parseTheDataWithId(idOfNearestCity);
+        if (weather == null) {
+            return null;
+        }
+
+        //get common city name with default locale
+        String cityName = Utils.getCommonCityName(context, lat, lon);
+        if (cityName != null) {
+            weather.setCity(new City(cityName));
+        }
+        resultText.setText(getWeatherInfoString(weather));
+        return weather;
+    }
+
+    private void processGettingWeatherFailed() {
+        statusText.setText(R.string.cant_get_weather);
+        weatherProgressBar.setVisibility(View.GONE);
+    }
+
+    private void setStatusSuccess(long time) {
+        Date date = new Date(time);
+        SimpleDateFormat format = new SimpleDateFormat("dd.mm.yyyy hh:mm");
+        statusText.setText(getString(R.string.last_weather, format.format(date)));
+        weatherProgressBar.setVisibility(View.GONE);
+    }
+
+    private String getWeatherInfoString(WeatherClass weather) {
+        return context.getString(R.string.weather_info_string, weather.getCity().getName(),
+                weather.getCondition(), weather.getDescr(),  weather.getHumidity(),
+                weather.getPressure(), weather.getTemp(), weather.getMinTemp(),
+                weather.getMaxTemp(), weather.getWindDeg(),  weather.getWindSpeed(),
+                weather.getCloudPerc());
+    }
+
+    public class LoadWeatherTask extends AsyncTask<Double, Void, String> {
 
         double lat, lon;
 
-        protected WeatherClass doInBackground(Double... locationArray) {
+        protected String doInBackground(Double... locationArray) {
             if (locationArray.length < 2) {
                 return null;
             }
             lat = locationArray[0];
             lon = locationArray[1];
 
-            String weatherInfo = client.getWeatherData(lat, lon);
-            if (weatherInfo == null) {
-                return null;
-            }
-            OpenWeatherParser openWeatherParser = new OpenWeatherParser(weatherInfo);
-            ArrayList<City> cities = openWeatherParser.parseTheCitiesFromData();
-            if (cities.size() == 0) {
-                return null;
-            }
-            String idOfNearestCity = Utils.getTheNearestCity(cities, lat, lon);
-            WeatherClass weather = openWeatherParser.parseTheDataWithId(idOfNearestCity);
-            return weather;
+            return client.getWeatherData(lat, lon);
         }
 
-        protected void onPostExecute(WeatherClass weather) {
-            if (weather == null) {
-                statusText.setText(R.string.cant_get_weather);
-                weatherProgressBar.setVisibility(View.GONE);
-                return;
+        protected void onPostExecute(String weatherInfo) {
+            WeatherClass weather = processWeatherJson(weatherInfo, lat, lon);
+            if (weather != null) {
+                //run load icon task
+                LoadIconTask iconTask = new LoadIconTask();
+                client.addTask(iconTask);
+                iconTask.execute(weather.getIcon());
+
+                long currentTime = System.currentTimeMillis();
+                setStatusSuccess(currentTime);
+                dbHelper.clearDataBase();
+                dbHelper.addData(lat, lon, currentTime, weatherInfo);
+            } else {
+                processGettingWeatherFailed();
             }
-            //get common city name with default locale
-            String cityName = Utils.getCommonCityName(context, lat, lon);
-            if (cityName != null) {
-                weather.setCity(new City(cityName));
-            }
-//            if (autoCompleteViewPlaces.getText().toString().equals("")) {
-//                autoCompleteViewPlaces.setText(weather.getCity().getName());
-//                autoCompleteViewPlaces.dismissDropDown();
-//            }
-            resultText.setText(getWeatherInfoString(weather));
-
-            //run load icon task
-            LoadIconTask iconTask = new LoadIconTask();
-            client.addTask(iconTask);
-            iconTask.execute(weather.getIcon());
-
-            long time = System.currentTimeMillis();
-            Date date = new Date(time);
-            SimpleDateFormat format = new SimpleDateFormat("dd.mm.yyyy hh:mm");
-            statusText.setText(getString(R.string.last_weather, format.format(date)));
-            weatherProgressBar.setVisibility(View.GONE);
-        }
-
-        private String getWeatherInfoString(WeatherClass weather) {
-            return context.getString(R.string.weather_info_string, weather.getCity().getName(),
-                    weather.getCondition(), weather.getDescr(),  weather.getHumidity(),
-                    weather.getPressure(), weather.getTemp(), weather.getMinTemp(),
-                    weather.getMaxTemp(), weather.getWindDeg(),  weather.getWindSpeed(),
-                    weather.getCloudPerc());
         }
     }
+
+
 
     class LoadIconTask extends AsyncTask<String, Void, Bitmap> {
 
@@ -344,7 +362,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         protected void onPostExecute(Bitmap result) {
-            weatherImage.setImageBitmap(result);
+            if (result != null) {
+                weatherImage.setImageBitmap(result);
+                Utils.saveWeatherPicture(result);
+            }
         }
 
     }

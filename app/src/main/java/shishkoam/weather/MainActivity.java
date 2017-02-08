@@ -98,12 +98,23 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        removeLocationRequest();
         initializeMap();
         autoCompleteViewPlaces = (AutoCompleteTextView) findViewById(R.id.atv_places);
         initPlacesAutoCompleteView();
-        requestLocation();
         dbHelper = new DBHelper(this);
+        restoreLastWeatherData();
+    }
+
+    private void restoreLastWeatherData() {
         DBObject object = dbHelper.readFirstData();
+        setLocationInUI(object.getLat(), object.getLon());
+        processWeatherJson(object.getRequest(), object.getLat(), object.getLon());
+        setStatusSuccess(object.getDate());
+        Bitmap bitmap = Utils.loadWeatherPicture();
+        if (bitmap != null) {
+            weatherImage.setImageBitmap(bitmap);
+        }
     }
 
     private void initPlacesAutoCompleteView() {
@@ -250,7 +261,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         client.cancelTasks();
         client.addTask(task);
         task.execute(lat, lon);
-        String locationFormat = getString(R.string.location_format, lat, lon);
         if (marker != null) {
             marker.remove();
         }
@@ -260,9 +270,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         } else {
             marker = googleMap.addMarker(new MarkerOptions().position(new LatLng(lat, lon))
-                    .title(locationFormat)
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
         }
+        setLocationInUI(lat, lon);
+    }
+
+    private void setLocationInUI(double lat, double lon) {
+        String locationFormat = getString(R.string.location_format, lat, lon);
         locationText.setText(locationFormat);
     }
 

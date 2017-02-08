@@ -73,7 +73,7 @@ public class Utils {
         return true;
     }
 
-    public static Bitmap readWeatherPicture() {
+    public static Bitmap loadWeatherPicture() {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
         Bitmap bitmap = BitmapFactory.decodeFile(WEATHER_FILE, options);

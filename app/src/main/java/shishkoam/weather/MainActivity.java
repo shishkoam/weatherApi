@@ -75,7 +75,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleApiClient googleApiClient;
     private CheckBox button;
     private DBHelper dbHelper;
-//    private MainActivity mainActivity = this;
+    private double currentLat;
+    private double currentLon;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,12 +107,15 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         initPlacesAutoCompleteView();
         dbHelper = new DBHelper(this);
         if (TaskManager.getInstance().hasActiveTasks()) {
+            //here we process async tasks that were running before device rotation
             TaskManager.getInstance().linkTasksToNewActivity(this);
+            setStatusInProgress();
         } else {
             restoreLastWeatherData();
         }
     }
 
+    //restore last request after application start
     private void restoreLastWeatherData() {
         DBObject object = dbHelper.readFirstData();
         setLocationInUI(object.getLat(), object.getLon());
@@ -123,6 +127,36 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //saving position
+        outState.putString(CITY, autoCompleteViewPlaces.getText().toString());
+        if (marker != null) {
+            outState.putDouble(LAT, currentLat);
+            outState.putDouble(LON, currentLon);
+            outState.putBoolean(MARKER_VISIBILITY, marker.isVisible());
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        //restore position
+        autoCompleteViewPlaces.setText(savedInstanceState.getString(CITY));
+        final double lat = savedInstanceState.getDouble(LAT, 0);
+        final double lon = savedInstanceState.getDouble(LON, 0);
+        if (lat == 0 && lon == 0) {
+            return;
+        }
+        setLocationInUI(lat, lon);
+        boolean markerVisibility = savedInstanceState.getBoolean(MARKER_VISIBILITY);
+        if (markerVisibility) {
+            currentLon = lon;
+            currentLat = lat;
+        }
+    }
+
     private void initPlacesAutoCompleteView() {
         autoCompleteViewPlaces.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -131,14 +165,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 final String placeId = String.valueOf(item.placeId);
                 PendingResult<PlaceBuffer> placeResult = Places.GeoDataApi
                         .getPlaceById(googleApiClient, placeId);
-                placeResult.setResultCallback(mUpdatePlaceDetailsCallback);
+                placeResult.setResultCallback(updatePlaceDetailsCallback);
             }
         });
         placeArrayAdapter = new PlaceArrayAdapter(this, android.R.layout.simple_list_item_1, null, null);
         autoCompleteViewPlaces.setAdapter(placeArrayAdapter);
     }
 
-    private ResultCallback<PlaceBuffer> mUpdatePlaceDetailsCallback = new ResultCallback<PlaceBuffer>() {
+    private ResultCallback<PlaceBuffer> updatePlaceDetailsCallback = new ResultCallback<PlaceBuffer>() {
         @Override
         public void onResult(PlaceBuffer places) {
             if (!places.getStatus().isSuccess()) {
@@ -185,6 +219,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 processLocation(latLng.latitude, latLng.longitude, false);
             }
         });
+
+        if (!(currentLat == 0 && currentLon == 0)) {
+            LatLng currentPos = new LatLng(currentLat, currentLon);
+            marker = googleMap.addMarker(new MarkerOptions().position(currentPos)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+        }
     }
 
     @Override
@@ -261,8 +301,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void processLocation(final double lat, final double lon, boolean myPosition) {
-        statusText.setText(R.string.getting_weather);
-        weatherProgressBar.setVisibility(View.VISIBLE);
+        setStatusInProgress();
+        currentLat = lat;
+        currentLon = lon;
         loadWeatherFromApi(lat, lon);
         if (marker != null) {
             marker.remove();
@@ -278,11 +319,15 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         setLocationInUI(lat, lon);
     }
 
+    private void setStatusInProgress() {
+        statusText.setText(R.string.getting_weather);
+        weatherProgressBar.setVisibility(View.VISIBLE);
+    }
+
     private void processWeatherFromApiCallback(String weatherInfo, double lat, double lon) {
         WeatherClass weather = processWeatherJson(weatherInfo, lat, lon);
         if (weather != null) {
             loadImageFromApi(weather.getIcon());
-
             long currentTime = System.currentTimeMillis();
             setStatusSuccess(currentTime);
             dbHelper.clearDataBase();
@@ -373,7 +418,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     private class LoadWeatherTask extends LinkActivityAsyncTask<Double, Void, String> {
 
-        double lat,lon;
+        double lat, lon;
 
         public LoadWeatherTask(MainActivity activity) {
             super(activity);

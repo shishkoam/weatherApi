@@ -2,7 +2,6 @@ package shishkoam.weather.weather;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import android.support.annotation.Nullable;
 
 import java.io.BufferedInputStream;
@@ -11,10 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Created by User on 02.02.2017
@@ -23,18 +19,6 @@ import java.util.Set;
 public class WeatherHttpClient {
     private static final String BASE_URL = "http://api.openweathermap.org/data/2.5/find?lat=%1$.2f&lon=%2$.2f";
     private static final String API = "&APPID=3de74275a393c4e0b8f3c30bdf93c7ae";
-    private Set<AsyncTask> tasks = new HashSet<>();
-
-    public void addTask(AsyncTask task) {
-        tasks.add(task);
-    }
-
-    public void cancelTasks() {
-        for (AsyncTask task : tasks) {
-            task.cancel(true);
-        }
-        tasks.clear();
-    }
 
     public String getWeatherData(double lat, double lon) {
         HttpURLConnection con = null;
@@ -48,29 +32,37 @@ public class WeatherHttpClient {
             con.connect();
 
             // Let's read the response
-            StringBuffer buffer = new StringBuffer();
+            StringBuilder buffer = new StringBuilder();
             is = con.getInputStream();
             BufferedReader br = new BufferedReader(new InputStreamReader(is));
             String line = null;
-            while ((line = br.readLine()) != null)
+            while ((line = br.readLine()) != null) {
                 buffer.append(line).append('\n');
+            }
             is.close();
             con.disconnect();
             return buffer.toString();
-        } catch (Throwable t) {
-            t.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         } finally {
-            try {
-                is.close();
-            } catch (Throwable t) {
-            }
-            try {
+            safeClose(is);
+            if (con != null) {
                 con.disconnect();
-            } catch (Throwable t) {
             }
         }
         return null;
 
+    }
+
+    private void safeClose(InputStream is) {
+        if (is == null) {
+            return;
+        }
+        try {
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Nullable
@@ -88,23 +80,30 @@ public class WeatherHttpClient {
             conn.disconnect();
             buf_stream = null;
             conn = null;
-        } catch (MalformedURLException ex) {
-            ex.printStackTrace();
         } catch (IOException ex) {
             ex.printStackTrace();
         } catch (OutOfMemoryError e) {
             e.printStackTrace();
             return null;
         } finally {
-            if (buf_stream != null)
-                try {
-                    buf_stream.close();
-                } catch (IOException ex) {
-                }
-            if (conn != null)
+            safeClose(buf_stream);
+            if (conn != null) {
                 conn.disconnect();
+            }
         }
         return bitmap;
     }
+
+    private void safeClose(BufferedInputStream buf_stream) {
+        if (buf_stream == null) {
+            return;
+        }
+        try {
+            buf_stream.close();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
 
 }

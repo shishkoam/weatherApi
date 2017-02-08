@@ -47,6 +47,7 @@ import shishkoam.weather.database.DBObject;
 import shishkoam.weather.places.PlaceArrayAdapter;
 import shishkoam.weather.weather.City;
 import shishkoam.weather.weather.OpenWeatherParser;
+import shishkoam.weather.weather.TaskManager;
 import shishkoam.weather.weather.WeatherClass;
 import shishkoam.weather.weather.WeatherHttpClient;
 
@@ -74,6 +75,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleApiClient googleApiClient;
     private CheckBox button;
     private DBHelper dbHelper;
+//    private MainActivity mainActivity = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,7 +105,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         autoCompleteViewPlaces = (AutoCompleteTextView) findViewById(R.id.atv_places);
         initPlacesAutoCompleteView();
         dbHelper = new DBHelper(this);
-        restoreLastWeatherData();
+        if (TaskManager.getInstance().hasActiveTasks()) {
+            TaskManager.getInstance().linkTasksToNewActivity(this);
+        } else {
+            restoreLastWeatherData();
+        }
     }
 
     private void restoreLastWeatherData() {
@@ -254,25 +260,44 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         autoCompleteViewPlaces.dismissDropDown();
     }
 
-    private void processLocation(double lat, double lon, boolean myPosition) {
+    private void processLocation(final double lat, final double lon, boolean myPosition) {
         statusText.setText(R.string.getting_weather);
         weatherProgressBar.setVisibility(View.VISIBLE);
-        LoadWeatherTask task = new LoadWeatherTask();
-        client.cancelTasks();
-        client.addTask(task);
-        task.execute(lat, lon);
+        loadWeatherFromApi(lat, lon);
         if (marker != null) {
             marker.remove();
         }
+        marker = googleMap.addMarker(new MarkerOptions().position(new LatLng(lat, lon))
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
         if (myPosition) {
             CameraPosition cameraPosition = new CameraPosition.Builder()
                     .target(new LatLng(lat, lon)).zoom(12).build();
             googleMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-        } else {
-            marker = googleMap.addMarker(new MarkerOptions().position(new LatLng(lat, lon))
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+            marker.setVisible(false);
         }
         setLocationInUI(lat, lon);
+    }
+
+    private void processWeatherFromApiCallback(String weatherInfo, double lat, double lon) {
+        WeatherClass weather = processWeatherJson(weatherInfo, lat, lon);
+        if (weather != null) {
+            loadImageFromApi(weather.getIcon());
+
+            long currentTime = System.currentTimeMillis();
+            setStatusSuccess(currentTime);
+            dbHelper.clearDataBase();
+            dbHelper.addData(lat, lon, currentTime, weatherInfo);
+        } else {
+            processGettingWeatherFailed();
+        }
+    }
+
+    private void processWeatherImageToUI(Bitmap result) {
+        if (result != null) {
+            weatherImage.setImageBitmap(result);
+            Utils.saveWeatherPicture(result);
+        }
+        TaskManager.getInstance().clearTasks();
     }
 
     private void setLocationInUI(double lat, double lon) {
@@ -289,7 +314,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         requestLocation();
     }
 
-    private  WeatherClass processWeatherJson(String weatherInfo, double lat, double lon) {
+    private WeatherClass processWeatherJson(String weatherInfo, double lat, double lon) {
         if (weatherInfo == null) {
             return null;
         }
@@ -327,15 +352,32 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     private String getWeatherInfoString(WeatherClass weather) {
         return context.getString(R.string.weather_info_string, weather.getCity().getName(),
-                weather.getCondition(), weather.getDescr(),  weather.getHumidity(),
+                weather.getCondition(), weather.getDescr(), weather.getHumidity(),
                 weather.getPressure(), weather.getTemp(), weather.getMinTemp(),
-                weather.getMaxTemp(), weather.getWindDeg(),  weather.getWindSpeed(),
+                weather.getMaxTemp(), weather.getWindDeg(), weather.getWindSpeed(),
                 weather.getCloudPerc());
     }
 
-    public class LoadWeatherTask extends AsyncTask<Double, Void, String> {
+    public void loadWeatherFromApi(double lat, double lon) {
+        TaskManager.getInstance().cancelTasks();
+        LoadWeatherTask weatherTask = new LoadWeatherTask(this);
+        TaskManager.getInstance().addTask(weatherTask);
+        weatherTask.execute(lat, lon);
+    }
 
-        double lat, lon;
+    public void loadImageFromApi(String icon) {
+        LoadIconTask imageLoadTask = new LoadIconTask(this);
+        TaskManager.getInstance().addTask(imageLoadTask);
+        imageLoadTask.execute(icon);
+    }
+
+    private class LoadWeatherTask extends LinkActivityAsyncTask<Double, Void, String> {
+
+        double lat,lon;
+
+        public LoadWeatherTask(MainActivity activity) {
+            super(activity);
+        }
 
         protected String doInBackground(Double... locationArray) {
             if (locationArray.length < 2) {
@@ -343,31 +385,19 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             }
             lat = locationArray[0];
             lon = locationArray[1];
-
             return client.getWeatherData(lat, lon);
         }
 
         protected void onPostExecute(String weatherInfo) {
-            WeatherClass weather = processWeatherJson(weatherInfo, lat, lon);
-            if (weather != null) {
-                //run load icon task
-                LoadIconTask iconTask = new LoadIconTask();
-                client.addTask(iconTask);
-                iconTask.execute(weather.getIcon());
-
-                long currentTime = System.currentTimeMillis();
-                setStatusSuccess(currentTime);
-                dbHelper.clearDataBase();
-                dbHelper.addData(lat, lon, currentTime, weatherInfo);
-            } else {
-                processGettingWeatherFailed();
-            }
+            getActivity().processWeatherFromApiCallback(weatherInfo, lat, lon);
         }
     }
 
+    private class LoadIconTask extends LinkActivityAsyncTask<String, Void, Bitmap> {
 
-
-    class LoadIconTask extends AsyncTask<String, Void, Bitmap> {
+        public LoadIconTask(MainActivity activity) {
+            super(activity);
+        }
 
         @Override
         protected Bitmap doInBackground(String... resId) {
@@ -376,12 +406,26 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         protected void onPostExecute(Bitmap result) {
-            if (result != null) {
-                weatherImage.setImageBitmap(result);
-                Utils.saveWeatherPicture(result);
-            }
+            getActivity().processWeatherImageToUI(result);
         }
 
     }
+
+    public abstract class LinkActivityAsyncTask<Params, Progress, Result> extends AsyncTask<Params, Progress, Result> {
+        private MainActivity activity;
+
+        public LinkActivityAsyncTask(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        public void linkActivity(MainActivity activity) {
+            this.activity = activity;
+        }
+
+        public MainActivity getActivity() {
+            return activity;
+        }
+    }
+
 }
 

@@ -5,5 +5,8 @@
     <string name="getting_weather">Getting weather</string>
     <string name="last_weather">"Last weather request %1$s"</string>
     <string name="cant_get_weather">Can\'t get weather data</string>
-    <string name="weather_info_string">Location:  %1$s/nWeather: %2$s (%3$s)/nHumidity: %4$d%%/nPressure: %5$d hPa/nTemperature: %6$.2f K (%7$.2f/%8$.2f K)/nWind direction %9$.1f degrees; Speed %10$.1f m/sec/nCloudiness %11$d%%</string>
+    <string name="weather_info_string">Location:  %1$s/nWeather: %2$s (%3$s)/nHumidity: %4$d%%/nPressure: %5$d hPa/nTemperature: %6$.2f K (%7$.2f/%8$.2f K)/nWind direction %9$.1f deg.; Speed %10$.1f m/sec/nCloudiness %11$d%%</string>
+    <string name="no_data">No data</string>
+    <string name="status_data">Here will be status</string>
+    <string name="location_coordinates">Location coordinates</string>
 </resources>

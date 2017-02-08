@@ -5,5 +5,8 @@
     <string name="getting_weather">Получение информации</string>
     <string name="last_weather">"Время последнего запроса %1$s"</string>
     <string name="cant_get_weather">Невозможно получить информацию о погоде</string>
-    <string name="weather_info_string">Местоположение:  %1$s\nПогода: %2$s (%3$s)\nВлажность: %4$d%%\nДавление: %5$d hPa\nTemperature: %6$.2f K (%7$.2f/%8$.2f K)\nНаправление ветра %9$.1f градусов; Скорость %10$.1f м/с\nОблачность %11$d%%</string>
+    <string name="weather_info_string">Местоположение:  %1$s\nПогода: %2$s (%3$s)\nВлажность: %4$d%%\nДавление: %5$dгПа\nTemperature: %6$.2fK (%7$.2f/%8$.2f K)\nНаправление ветра %9$.1f град.; Скорость %10$.1f м/с\nОблачность %11$d%%</string>
+    <string name="no_data">Данные отсутствуют</string>
+    <string name="status_data">Тут будет статус</string>
+    <string name="location_coordinates">Координаты позиции</string>
 </resources>

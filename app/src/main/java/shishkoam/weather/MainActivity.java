@@ -386,6 +386,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     //restore last request after application start from DB
     private void restoreLastWeatherData() {
         DBObject object = dbHelper.readFirstData();
+        if  (object == null) {
+            return;
+        }
         currentLat = object.getLat();
         currentLon = object.getLon();
         setLocationInUI(currentLat, currentLon);

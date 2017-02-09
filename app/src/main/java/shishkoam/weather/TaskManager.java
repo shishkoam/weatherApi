@@ -1,9 +1,7 @@
-package shishkoam.weather.weather;
+package shishkoam.weather;
 
 import java.util.HashSet;
 import java.util.Set;
-
-import shishkoam.weather.MainActivity;
 
 /**
  * Created by User on 08.02.2017

@@ -3,13 +3,10 @@ package shishkoam.weather;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.BitmapDrawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Environment;
-import android.widget.ImageView;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -76,8 +73,7 @@ public class Utils {
     public static Bitmap loadWeatherPicture() {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig = Bitmap.Config.ARGB_8888;
-        Bitmap bitmap = BitmapFactory.decodeFile(WEATHER_FILE, options);
-        return bitmap;
+        return BitmapFactory.decodeFile(WEATHER_FILE, options);
     }
 
     private static void safeClose(OutputStream fOut) {

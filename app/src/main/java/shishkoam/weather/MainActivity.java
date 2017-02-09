@@ -48,7 +48,6 @@ import shishkoam.weather.database.DBObject;
 import shishkoam.weather.places.PlaceArrayAdapter;
 import shishkoam.weather.weather.City;
 import shishkoam.weather.weather.OpenWeatherParser;
-import shishkoam.weather.weather.TaskManager;
 import shishkoam.weather.weather.WeatherClass;
 import shishkoam.weather.weather.WeatherHttpClient;
 

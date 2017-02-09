@@ -6,24 +6,24 @@ package shishkoam.weather.weather;
 
 public interface JsonConst {
 
-    static String LIST = "list";
-    static String COORDINATES = "coord";
-    static String ID = "id";
-    static String LATITUDE = "lat";
-    static String LONGITUDE = "lon";
-    static String NAME = "name";
-    static String WEATHER = "weather";
-    static String DESCRIPTION = "description";
-    static String MAIN = "main";
-    static String ICON = "icon";
-    static String HUMIDITY = "humidity";
-    static String PRESSURE = "pressure";
-    static String TEMP_MAX = "temp_max";
-    static String TEMP_MIN = "temp_min";
-    static String TEMP = "temp";
-    static String WIND = "wind";
-    static String SPEED = "speed";
-    static String DEGREES = "deg";
-    static String CLOUDS = "clouds";
-    static String ALL = "all";
+    String LIST = "list";
+    String COORDINATES = "coord";
+    String ID = "id";
+    String LATITUDE = "lat";
+    String LONGITUDE = "lon";
+    String NAME = "name";
+    String WEATHER = "weather";
+    String DESCRIPTION = "description";
+    String MAIN = "main";
+    String ICON = "icon";
+    String HUMIDITY = "humidity";
+    String PRESSURE = "pressure";
+    String TEMP_MAX = "temp_max";
+    String TEMP_MIN = "temp_min";
+    String TEMP = "temp";
+    String WIND = "wind";
+    String SPEED = "speed";
+    String DEGREES = "deg";
+    String CLOUDS = "clouds";
+    String ALL = "all";
 }

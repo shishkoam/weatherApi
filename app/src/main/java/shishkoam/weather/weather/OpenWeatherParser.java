@@ -11,7 +11,6 @@ import java.util.ArrayList;
  */
 
 public class OpenWeatherParser implements JsonConst {
-    private WeatherClass weather;
     private String data;
 
     /**
@@ -24,7 +23,7 @@ public class OpenWeatherParser implements JsonConst {
     }
 
     public ArrayList<City> parseTheCitiesFromData() {
-        ArrayList<City> cities = new ArrayList<City>();
+        ArrayList<City> cities = new ArrayList<>();
         try {
             JSONObject jObj = new JSONObject(data);
             JSONArray jArr = jObj.getJSONArray(LIST);
@@ -41,7 +40,7 @@ public class OpenWeatherParser implements JsonConst {
     }
 
     public WeatherClass parseTheDataWithId(String id) {
-        weather = new WeatherClass();
+        WeatherClass weather = new WeatherClass();
         String thisId;
         try {
             JSONObject jObj = new JSONObject(data);
@@ -85,8 +84,7 @@ public class OpenWeatherParser implements JsonConst {
     }
 
     private static JSONObject getObject(String tagName, JSONObject jObj) throws JSONException {
-        JSONObject subObj = jObj.getJSONObject(tagName);
-        return subObj;
+        return jObj.getJSONObject(tagName);
     }
 
     private static String getString(String tagName, JSONObject jObj) throws JSONException {

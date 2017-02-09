@@ -11,7 +11,7 @@ public class DBObject {
     private long date;
     private String request = "";
 
-    public DBObject(int id, double lat, double lon, long date, String request) {
+    DBObject(int id, double lat, double lon, long date, String request) {
         this.id = id;
         this.lat = lat;
         this.lon = lon;

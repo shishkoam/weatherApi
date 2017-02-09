@@ -1,9 +1,5 @@
 package shishkoam.weather.weather;
 
-import android.content.Context;
-
-import shishkoam.weather.R;
-
 /**
  * Created by User on 02.02.2017
  */
@@ -31,15 +27,15 @@ public class WeatherClass {
         this.city = city;
     }
 
-    public void setWeatherId(int id) {
+    void setWeatherId(int id) {
         this.weatherId = id;
     }
 
-    public void setDescr(String description) {
+    void setDescr(String description) {
         this.description = description;
     }
 
-    public void setCondition(String conditionMain) {
+    void setCondition(String conditionMain) {
         this.conditionMain = conditionMain;
     }
 
@@ -47,35 +43,35 @@ public class WeatherClass {
         this.icon = icon;
     }
 
-    public void setHumidity(int humidity) {
+    void setHumidity(int humidity) {
         this.humidity = humidity;
     }
 
-    public void setPressure(int pressure) {
+    void setPressure(int pressure) {
         this.pressure = pressure;
     }
 
-    public void setMaxTemp(float temp_max) {
+    void setMaxTemp(float temp_max) {
         this.temp_max = temp_max;
     }
 
-    public void setMinTemp(float temp_min) {
+    void setMinTemp(float temp_min) {
         this.temp_min = temp_min;
     }
 
-    public void setTemp(float temp) {
+    void setTemp(float temp) {
         this.temp = temp;
     }
 
-    public void setWindSpeed(float windSpeed) {
+    void setWindSpeed(float windSpeed) {
         this.windSpeed = windSpeed;
     }
 
-    public void setWindDeg(float windDeg) {
+    void setWindDeg(float windDeg) {
         this.windDeg = windDeg;
     }
 
-    public void setCloudPerc(int all) {
+    void setCloudPerc(int all) {
         this.cloudPerc = all;
     }
 

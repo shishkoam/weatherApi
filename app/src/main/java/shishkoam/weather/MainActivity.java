@@ -16,6 +16,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.CheckBox;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -64,16 +65,18 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private TextView locationText;
     private ProgressBar weatherProgressBar;
     private ImageView weatherImage;
+    private ImageButton refreshButton;
+    private CheckBox myPositonButton;
+    private SupportMapFragment mapFragment;
+    private AutoCompleteTextView autoCompleteViewPlaces;
+
     private LocationManager locationManager;
     private Context context = this;
     private GoogleMap googleMap;
-    private SupportMapFragment mapFragment;
     private Marker marker;
     private WeatherHttpClient client = new WeatherHttpClient();
-    private AutoCompleteTextView autoCompleteViewPlaces;
     private PlaceArrayAdapter placeArrayAdapter;
     private GoogleApiClient googleApiClient;
-    private CheckBox button;
     private DBHelper dbHelper;
     private double currentLat;
     private double currentLon;
@@ -92,12 +95,21 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         statusText = (TextView) findViewById(R.id.status);
         weatherProgressBar = (ProgressBar) findViewById(R.id.progressBar);
         weatherImage = (ImageView) findViewById(R.id.weather_image);
-        button = (CheckBox) findViewById(R.id.btnLocationSettings);
-        button.setOnClickListener(new View.OnClickListener() {
+        myPositonButton = (CheckBox) findViewById(R.id.btnLocationSettings);
+        myPositonButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                button.setChecked(true);
-                turnOnLocation();
+                turnOnLocation(true);
+            }
+        });
+        refreshButton = (ImageButton) findViewById(R.id.refresh_button);
+        refreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!(currentLon == 0 && currentLat == 0)) {
+                    setStatusInProgress();
+                    loadWeatherFromApi(currentLat, currentLon);
+                }
             }
         });
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -115,18 +127,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    //restore last request after application start
-    private void restoreLastWeatherData() {
-        DBObject object = dbHelper.readFirstData();
-        setLocationInUI(object.getLat(), object.getLon());
-        processWeatherJson(object.getRequest(), object.getLat(), object.getLon());
-        setStatusSuccess(object.getDate());
-        Bitmap bitmap = Utils.loadWeatherPicture();
-        if (bitmap != null) {
-            weatherImage.setImageBitmap(bitmap);
-        }
-    }
-
+    //here we saving and restoring instance for device rotation
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -157,6 +158,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    // next methods init auto complete view to select cities
     private void initPlacesAutoCompleteView() {
         autoCompleteViewPlaces.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -201,6 +203,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         placeArrayAdapter.setGoogleApiClient(null);
     }
 
+
+    private void setCityValueToAutoCompleteView(double lat, double lon) {
+        autoCompleteViewPlaces.setText(Utils.getCommonCityName(context, lat, lon));
+        autoCompleteViewPlaces.dismissDropDown();
+    }
+
+    //init map
     private void initializeMap() {
         if (mapFragment == null) {
             mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -233,10 +242,41 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         initializeMap();
     }
 
-    private void requestLocation() {
+    //next methods work with location
+    public void turnOnLocation(boolean askSettings) {
+        boolean network_enabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        boolean gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (!network_enabled && !gps_enabled) {
+            if (askSettings) {
+                Intent askGps = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivityForResult(askGps, GPS_CODE);
+            }
+        } else {
+            myPositonButton.setChecked(true);
+            requestLocation(true);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == GPS_CODE) {
+            switch (requestCode) {
+                case GPS_CODE:
+                    turnOnLocation(false);
+                    break;
+            }
+        }
+    }
+
+    private void requestLocation(boolean askPermission) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: request permission
+            // request the permission
+            if (askPermission) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, GPS_CODE);
+            }
             return;
         }
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BW_UPDATES,
@@ -246,13 +286,30 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[],
+                                           int[] grantResults) {
+        switch (requestCode) {
+            case GPS_CODE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    requestLocation(false);
+                } else {
+                    Toast.makeText(this, R.string.location_perm_denied, Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+        }
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         removeLocationRequest();
     }
 
     private void removeLocationRequest() {
-        button.setChecked(false);
+        myPositonButton.setChecked(false);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             //if we have not permission we have any location listener - so we can ignore it
@@ -295,9 +352,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     };
 
-    private void setCityValueToAutoCompleteView(double lat, double lon) {
-        autoCompleteViewPlaces.setText(Utils.getCommonCityName(context, lat, lon));
-        autoCompleteViewPlaces.dismissDropDown();
+    private void setLocationInUI(double lat, double lon) {
+        String locationFormat = getString(R.string.location_format, lat, lon);
+        locationText.setText(locationFormat);
     }
 
     private void processLocation(final double lat, final double lon, boolean myPosition) {
@@ -319,14 +376,40 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         setLocationInUI(lat, lon);
     }
 
-    private void setStatusInProgress() {
-        statusText.setText(R.string.getting_weather);
-        weatherProgressBar.setVisibility(View.VISIBLE);
+    //restore last request after application start from DB
+    private void restoreLastWeatherData() {
+        DBObject object = dbHelper.readFirstData();
+        currentLat = object.getLat();
+        currentLon = object.getLon();
+        setLocationInUI(currentLat, currentLon);
+        WeatherClass weather = parseWeatherJson(object.getRequest(), object.getLat(), object.getLon());
+        resultText.setText(getWeatherInfoString(weather));
+        setStatusSuccess(object.getDate());
+        Bitmap bitmap = Utils.loadWeatherPicture();
+        if (bitmap != null) {
+            weatherImage.setImageBitmap(bitmap);
+        }
     }
 
-    private void processWeatherFromApiCallback(String weatherInfo, double lat, double lon) {
-        WeatherClass weather = processWeatherJson(weatherInfo, lat, lon);
+    //working with open weather api
+    public void loadWeatherFromApi(double lat, double lon) {
+        TaskManager.getInstance().cancelTasks();
+        LoadWeatherTask weatherTask = new LoadWeatherTask(this);
+        TaskManager.getInstance().addTask(weatherTask);
+        weatherTask.execute(lat, lon);
+    }
+
+
+    public void loadImageFromApi(String icon) {
+        LoadIconTask imageLoadTask = new LoadIconTask(this);
+        TaskManager.getInstance().addTask(imageLoadTask);
+        imageLoadTask.execute(icon);
+    }
+
+    private void processWeatherStringFromApi(String weatherInfo, double lat, double lon) {
+        WeatherClass weather = parseWeatherJson(weatherInfo, lat, lon);
         if (weather != null) {
+            resultText.setText(getWeatherInfoString(weather));
             loadImageFromApi(weather.getIcon());
             long currentTime = System.currentTimeMillis();
             setStatusSuccess(currentTime);
@@ -337,32 +420,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void processWeatherImageToUI(Bitmap result) {
-        if (result != null) {
-            weatherImage.setImageBitmap(result);
-            Utils.saveWeatherPicture(result);
-        }
-        TaskManager.getInstance().clearTasks();
-    }
-
-    private void setLocationInUI(double lat, double lon) {
-        String locationFormat = getString(R.string.location_format, lat, lon);
-        locationText.setText(locationFormat);
-    }
-
-    public void turnOnLocation() {
-        boolean network_enabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        boolean gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        if (!network_enabled && !gps_enabled) {
-            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-        }
-        requestLocation();
-    }
-
-    private WeatherClass processWeatherJson(String weatherInfo, double lat, double lon) {
+    private WeatherClass parseWeatherJson(String weatherInfo, double lat, double lon) {
         if (weatherInfo == null) {
             return null;
         }
+        //here should be tested on slow devices, and if here will be stuck add asynctask for json processing
         OpenWeatherParser openWeatherParser = new OpenWeatherParser(weatherInfo);
         ArrayList<City> cities = openWeatherParser.parseTheCitiesFromData();
         if (cities.size() == 0) {
@@ -379,7 +441,6 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         if (cityName != null) {
             weather.setCity(new City(cityName));
         }
-        resultText.setText(getWeatherInfoString(weather));
         return weather;
     }
 
@@ -395,6 +456,19 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         weatherProgressBar.setVisibility(View.GONE);
     }
 
+    private void setStatusInProgress() {
+        statusText.setText(R.string.getting_weather);
+        weatherProgressBar.setVisibility(View.VISIBLE);
+    }
+
+    private void processWeatherImageToUI(Bitmap result) {
+        if (result != null) {
+            weatherImage.setImageBitmap(result);
+            Utils.saveWeatherPicture(result);
+        }
+        TaskManager.getInstance().clearTasks();
+    }
+
     private String getWeatherInfoString(WeatherClass weather) {
         return context.getString(R.string.weather_info_string, weather.getCity().getName(),
                 weather.getCondition(), weather.getDescr(), weather.getHumidity(),
@@ -403,24 +477,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 weather.getCloudPerc());
     }
 
-    public void loadWeatherFromApi(double lat, double lon) {
-        TaskManager.getInstance().cancelTasks();
-        LoadWeatherTask weatherTask = new LoadWeatherTask(this);
-        TaskManager.getInstance().addTask(weatherTask);
-        weatherTask.execute(lat, lon);
-    }
-
-    public void loadImageFromApi(String icon) {
-        LoadIconTask imageLoadTask = new LoadIconTask(this);
-        TaskManager.getInstance().addTask(imageLoadTask);
-        imageLoadTask.execute(icon);
-    }
-
     private class LoadWeatherTask extends LinkActivityAsyncTask<Double, Void, String> {
 
         double lat, lon;
 
-        public LoadWeatherTask(MainActivity activity) {
+        LoadWeatherTask(MainActivity activity) {
             super(activity);
         }
 
@@ -434,13 +495,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         protected void onPostExecute(String weatherInfo) {
-            getActivity().processWeatherFromApiCallback(weatherInfo, lat, lon);
+            getActivity().processWeatherStringFromApi(weatherInfo, lat, lon);
         }
     }
 
     private class LoadIconTask extends LinkActivityAsyncTask<String, Void, Bitmap> {
 
-        public LoadIconTask(MainActivity activity) {
+        LoadIconTask(MainActivity activity) {
             super(activity);
         }
 
@@ -459,7 +520,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     public abstract class LinkActivityAsyncTask<Params, Progress, Result> extends AsyncTask<Params, Progress, Result> {
         private MainActivity activity;
 
-        public LinkActivityAsyncTask(MainActivity activity) {
+        LinkActivityAsyncTask(MainActivity activity) {
             this.activity = activity;
         }
 
@@ -467,7 +528,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             this.activity = activity;
         }
 
-        public MainActivity getActivity() {
+        MainActivity getActivity() {
             return activity;
         }
     }

@@ -9,4 +9,5 @@
     <string name="no_data">Данные отсутствуют</string>
     <string name="status_data">Тут будет статус</string>
     <string name="location_coordinates">Координаты позиции</string>
+    <string name="location_perm_denied">В получении доступа к местоположению отказано</string>
 </resources>

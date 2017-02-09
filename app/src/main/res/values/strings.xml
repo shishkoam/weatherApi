@@ -9,4 +9,5 @@
     <string name="no_data">No data</string>
     <string name="status_data">Here will be status</string>
     <string name="location_coordinates">Location coordinates</string>
+    <string name="location_perm_denied">Location permission denied</string>
 </resources>

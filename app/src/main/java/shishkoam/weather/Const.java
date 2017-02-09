@@ -13,6 +13,6 @@ public interface Const {
     String CITY = "city";
     String LAT = "lat";
     String LON = "lon";
-    String MARKER_VISIBILITY = "MARKER_VISIBILITY";
-
+    String MARKER_VISIBILITY = "marker_visibility";
+    String GPS_STATE = "gps_state";
 }

@@ -57,16 +57,15 @@ import shishkoam.weather.weather.WeatherHttpClient;
  * Created by User on 02.02.2017
  */
 
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback, Const, GoogleApiClient.OnConnectionFailedListener,
-        GoogleApiClient.ConnectionCallbacks {
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, Const,
+        GoogleApiClient.OnConnectionFailedListener, GoogleApiClient.ConnectionCallbacks {
 
     private TextView resultText;
     private TextView statusText;
     private TextView locationText;
     private ProgressBar weatherProgressBar;
     private ImageView weatherImage;
-    private ImageButton refreshButton;
-    private CheckBox myPositonButton;
+    private CheckBox myPositionButton;
     private SupportMapFragment mapFragment;
     private AutoCompleteTextView autoCompleteViewPlaces;
 
@@ -78,9 +77,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private PlaceArrayAdapter placeArrayAdapter;
     private GoogleApiClient googleApiClient;
     private DBHelper dbHelper;
+    private boolean markerInitVisibility;
     private double currentLat;
     private double currentLon;
-
+    private boolean isGpsOn;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,14 +95,14 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         statusText = (TextView) findViewById(R.id.status);
         weatherProgressBar = (ProgressBar) findViewById(R.id.progressBar);
         weatherImage = (ImageView) findViewById(R.id.weather_image);
-        myPositonButton = (CheckBox) findViewById(R.id.btnLocationSettings);
-        myPositonButton.setOnClickListener(new View.OnClickListener() {
+        myPositionButton = (CheckBox) findViewById(R.id.btnLocationSettings);
+        myPositionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 turnOnLocation(true);
             }
         });
-        refreshButton = (ImageButton) findViewById(R.id.refresh_button);
+        ImageButton refreshButton = (ImageButton) findViewById(R.id.refresh_button);
         refreshButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -133,6 +133,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         super.onSaveInstanceState(outState);
         //saving position
         outState.putString(CITY, autoCompleteViewPlaces.getText().toString());
+        outState.putBoolean(GPS_STATE, isGpsOn);
         if (marker != null) {
             outState.putDouble(LAT, currentLat);
             outState.putDouble(LON, currentLon);
@@ -145,14 +146,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         super.onRestoreInstanceState(savedInstanceState);
         //restore position
         autoCompleteViewPlaces.setText(savedInstanceState.getString(CITY));
+        isGpsOn = savedInstanceState.getBoolean(GPS_STATE, myPositionButton.isChecked());
         final double lat = savedInstanceState.getDouble(LAT, 0);
         final double lon = savedInstanceState.getDouble(LON, 0);
         if (lat == 0 && lon == 0) {
+            markerInitVisibility = false;
             return;
         }
         setLocationInUI(lat, lon);
         boolean markerVisibility = savedInstanceState.getBoolean(MARKER_VISIBILITY);
         if (markerVisibility) {
+            markerInitVisibility = true;
             currentLon = lon;
             currentLat = lat;
         }
@@ -229,7 +233,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        if (!(currentLat == 0 && currentLon == 0)) {
+        if (markerInitVisibility && !(currentLat == 0 && currentLon == 0)) {
             LatLng currentPos = new LatLng(currentLat, currentLon);
             marker = googleMap.addMarker(new MarkerOptions().position(currentPos)
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
@@ -240,6 +244,9 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         initializeMap();
+        if (isGpsOn) {
+            myPositionButton.performClick();
+        }
     }
 
     //next methods work with location
@@ -252,7 +259,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 startActivityForResult(askGps, GPS_CODE);
             }
         } else {
-            myPositonButton.setChecked(true);
+            myPositionButton.setChecked(true);
             requestLocation(true);
         }
     }
@@ -305,11 +312,12 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onPause() {
         super.onPause();
+        isGpsOn = myPositionButton.isChecked();
         removeLocationRequest();
     }
 
     private void removeLocationRequest() {
-        myPositonButton.setChecked(false);
+        myPositionButton.setChecked(false);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             //if we have not permission we have any location listener - so we can ignore it
